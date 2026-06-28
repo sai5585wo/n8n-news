@@ -1,0 +1,155 @@
+{
+  "name": "科技新闻 RSS -> DeepSeek 摘要 -> Notion 最小测试",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://techcrunch.com/feed/"
+      },
+      "id": "rss-read",
+      "name": "RSS Read",
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "maxItems": 1
+      },
+      "id": "limit-one",
+      "name": "Limit 1 条",
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [
+        440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.deepseek.com/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer 你的_DEEPSEEK_API_KEY"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"deepseek-v4-flash\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"你是科技新闻摘要助手。请用中文输出简洁、准确、适合日报的摘要。\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"请总结这条科技新闻，输出 3 句话以内。标题：\" + $node[\"RSS Read\"].json.title + \"\\n链接：\" + $node[\"RSS Read\"].json.link + \"\\n内容：\" + ($node[\"RSS Read\"].json.contentSnippet || $node[\"RSS Read\"].json.content || $node[\"RSS Read\"].json.description || \"\")\n    }\n  ],\n  \"stream\": false\n}"
+      },
+      "id": "deepseek-summary",
+      "name": "DeepSeek 生成摘要",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        680,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.notion.com/v1/pages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer 你的_NOTION_API_KEY"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Notion-Version",
+              "value": "2022-06-28"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"parent\": {\n    \"database_id\": \"你的_NOTION_DATABASE_ID\"\n  },\n  \"properties\": {\n    \"标题\": {\n      \"title\": [\n        {\n          \"text\": {\n            \"content\": $node[\"RSS Read\"].json.title || \"无标题\"\n          }\n        }\n      ]\n    },\n    \"链接\": {\n      \"url\": $node[\"RSS Read\"].json.link\n    },\n    \"摘要\": {\n      \"rich_text\": [\n        {\n          \"text\": {\n            \"content\": $json.choices[0].message.content\n          }\n        }\n      ]\n    },\n    \"状态\": {\n      \"select\": {\n        \"name\": \"已收集\"\n      }\n    },\n    \"日期\": {\n      \"date\": {\n        \"start\": $now.toISO()\n      }\n    }\n  }\n}"
+      },
+      "id": "notion-create-page",
+      "name": "写入 Notion",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        920,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "RSS Read",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RSS Read": {
+      "main": [
+        [
+          {
+            "node": "Limit 1 条",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limit 1 条": {
+      "main": [
+        [
+          {
+            "node": "DeepSeek 生成摘要",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DeepSeek 生成摘要": {
+      "main": [
+        [
+          {
+            "node": "写入 Notion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
