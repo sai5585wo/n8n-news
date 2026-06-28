@@ -57,7 +57,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"model\": \"deepseek-v4-flash\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"你是科技新闻摘要助手。请用中文输出简洁、准确、适合日报的摘要。\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"请总结这条科技新闻，输出 3 句话以内。标题：\" + $node[\"RSS Read\"].json.title + \"\\n链接：\" + $node[\"RSS Read\"].json.link + \"\\n内容：\" + ($node[\"RSS Read\"].json.contentSnippet || $node[\"RSS Read\"].json.content || $node[\"RSS Read\"].json.description || \"\")\n    }\n  ],\n  \"stream\": false\n}"
+        "jsonBody": "{\n  \"model\": \"deepseek-chat\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"你是科技新闻摘要助手。请用中文输出简洁、准确、适合日报的摘要。\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"={{ '请总结这条科技新闻，输出 3 句话以内。标题：' + ($node['RSS Read'].json.title || '无标题') + '\\n链接：' + ($node['RSS Read'].json.link || '') + '\\n内容：' + ($node['RSS Read'].json.contentSnippet || $node['RSS Read'].json.content || $node['RSS Read'].json.description || '') }}\"\n    }\n  ],\n  \"stream\": false\n}"
       },
       "id": "deepseek-summary",
       "name": "DeepSeek 生成摘要",
@@ -91,7 +91,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"parent\": {\n    \"database_id\": \"你的_NOTION_DATABASE_ID\"\n  },\n  \"properties\": {\n    \"标题\": {\n      \"title\": [\n        {\n          \"text\": {\n            \"content\": $node[\"RSS Read\"].json.title || \"无标题\"\n          }\n        }\n      ]\n    },\n    \"链接\": {\n      \"url\": $node[\"RSS Read\"].json.link\n    },\n    \"摘要\": {\n      \"rich_text\": [\n        {\n          \"text\": {\n            \"content\": $json.choices[0].message.content\n          }\n        }\n      ]\n    },\n    \"状态\": {\n      \"select\": {\n        \"name\": \"已收集\"\n      }\n    },\n    \"日期\": {\n      \"date\": {\n        \"start\": $now.toISO()\n      }\n    }\n  }\n}"
+        "jsonBody": "{\n  \"parent\": {\n    \"database_id\": \"你的_NOTION_DATABASE_ID\"\n  },\n  \"properties\": {\n    \"标题\": {\n      \"title\": [\n        {\n          \"text\": {\n            \"content\": \"={{ $node['RSS Read'].json.title || '无标题' }}\"\n          }\n        }\n      ]\n    },\n    \"链接\": {\n      \"url\": \"={{ $node['RSS Read'].json.link }}\"\n    },\n    \"摘要\": {\n      \"rich_text\": [\n        {\n          \"text\": {\n            \"content\": \"={{ $json.choices[0].message.content }}\"\n          }\n        }\n      ]\n    },\n    \"状态\": {\n      \"select\": {\n        \"name\": \"已收集\"\n      }\n    },\n    \"日期\": {\n      \"date\": {\n        \"start\": \"={{ $now.toISO() }}\"\n      }\n    }\n  }\n}"
       },
       "id": "notion-create-page",
       "name": "写入 Notion",
